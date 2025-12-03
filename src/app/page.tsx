@@ -7,7 +7,6 @@ import { Brain, Heart, Users, Target, MessageCircle, Calendar, ArrowRight, Spark
 import { quizQuestions, therapyApproaches, mockPsychologists, brazilianStates } from '@/lib/data';
 import { TherapyApproach, QuizResult, Psychologist, PsychologistRegistration, Appointment } from '@/lib/types';
 import { AuthModal } from '@/components/custom/auth-modal';
-import { useRouter } from 'next/navigation';
 
 type Step = 'home' | 'quiz' | 'result' | 'list' | 'profile' | 'therapy-detail' | 'psy-register' | 'psy-subscription' | 'psy-dashboard';
 
@@ -18,7 +17,6 @@ interface User {
 }
 
 export default function HomePage() {
-  const router = useRouter();
   const [step, setStep] = useState<Step>('home');
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<TherapyApproach[]>([]);
@@ -371,32 +369,23 @@ export default function HomePage() {
                 <Users className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-semibold mb-2 text-gray-800">Psicólogos Qualificados</h3>
-              <p className="text-gray-600 text-sm mb-3">
+              <p className="text-gray-600 text-sm mb-4">
                 No EncontraPsi, você encontra psicólogos altamente qualificados, prontos para oferecer o suporte necessário para suas necessidades emocionais e psicológicas. Todos os profissionais cadastrados em nossa plataforma possuem registro ativo no Conselho Regional de Psicologia (CRP) e são especializados em diversas abordagens terapêuticas, garantindo que você encontre o terapeuta ideal para o seu perfil.
               </p>
-              <Button
-                onClick={() => router.push('/about')}
-                variant="ghost"
-                size="sm"
-                className="text-purple-600 hover:text-purple-700 p-0 h-auto font-medium"
-              >
-                Saiba mais...
-              </Button>
+              <p className="text-gray-600 text-sm mb-4">
+                Nossos psicólogos passam por um rigoroso processo de validação de documentos, incluindo diplomas e certificados, para assegurar que você está em boas mãos. Além disso, eles são constantemente avaliados por pacientes, o que nos permite destacar aqueles que oferecem um atendimento excepcional.
+              </p>
+              <p className="text-gray-600 text-sm">
+                Seja qual for a sua necessidade, nossos psicólogos estão preparados para ajudar você a encontrar o equilíbrio e o bem-estar que procura. Explore as opções disponíveis e agende sua consulta com confiança.
+              </p>
             </Card>
 
-            <Card 
-              className="p-6 bg-white/80 backdrop-blur-sm border-blue-100 hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => router.push('/appointments')}
-            >
+            <Card className="p-6 bg-white/80 backdrop-blur-sm border-blue-100 hover:shadow-lg transition-shadow">
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4">
                 <Calendar className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-semibold mb-2 text-gray-800">Agendamento Fácil</h3>
-              <p className="text-gray-600 text-sm mb-3">Agende consultas online ou presenciais diretamente pela plataforma com calendário interativo.</p>
-              <div className="flex items-center gap-2 text-purple-600 text-sm font-medium">
-                <span>Agendar agora</span>
-                <ArrowRight className="w-4 h-4" />
-              </div>
+              <p className="text-gray-600 text-sm">Agende consultas online ou presenciais diretamente pela plataforma com calendário interativo.</p>
             </Card>
           </div>
 
