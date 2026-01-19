@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Brain, Heart, Users, Target, MessageCircle, Calendar, ArrowRight, Sparkles, CheckCircle, Home, BookOpen, UserPlus, Settings, CreditCard, Check, X, Upload, AlertCircle, Clock, Star, Bell, LogOut, User as UserIcon } from 'lucide-react';
 import { quizQuestions, therapyApproaches, mockPsychologists, brazilianStates } from '@/lib/data';
-import { TherapyApproach, QuizResult, Psychologist, PsychologistRegistration, Appointment } from '@/lib/types';
+import { TherapyApproach, QuizResult, Psychologist, PsychologistRegistration, Appointment, QuizQuestion } from '@/lib/types';
 import { AuthModal } from '@/components/custom/auth-modal';
 import { useRouter } from 'next/navigation';
 
@@ -16,6 +16,16 @@ interface User {
   email: string;
   phone: string;
   role: 'patient' | 'psychologist';
+}
+
+// Função para embaralhar array (Fisher-Yates shuffle)
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
 }
 
 export default function HomePage() {
@@ -30,6 +40,7 @@ export default function HomePage() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState<string>('');
+  const [randomizedQuestions, setRandomizedQuestions] = useState<QuizQuestion[]>([]);
   
   // Estados de autenticação
   const [user, setUser] = useState<User | null>(null);
@@ -99,16 +110,20 @@ export default function HomePage() {
   };
 
   const startQuiz = () => {
+    // Embaralhar perguntas ao iniciar o quiz
+    const shuffled = shuffleArray(quizQuestions);
+    setRandomizedQuestions(shuffled);
     setStep('quiz');
     setCurrentQuestion(0);
     setAnswers([]);
+    setQuizResult(null);
   };
 
   const handleAnswer = (approach: TherapyApproach) => {
     const newAnswers = [...answers, approach];
     setAnswers(newAnswers);
 
-    if (currentQuestion < quizQuestions.length - 1) {
+    if (currentQuestion < randomizedQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
       // Calcular resultado
@@ -433,7 +448,7 @@ export default function HomePage() {
                 <Card 
                   key={therapy.id} 
                   className="p-6 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group"
-                  onClick={() => viewTherapyDetail(therapy.id)}
+                  onClick={() => router.push(`/abordagens/${therapy.id}`)}
                 >
                   <div className={`w-12 h-12 bg-gradient-to-br ${therapy.color} rounded-xl flex items-center justify-center mb-4 text-2xl group-hover:scale-110 transition-transform`}>
                     {therapy.icon}
@@ -460,6 +475,237 @@ export default function HomePage() {
           onSuccess={handleAuthSuccess}
           mode={authMode}
         />
+      </div>
+    );
+  }
+
+  // TELA QUIZ
+  if (step === 'quiz') {
+    const currentQuizQuestion = randomizedQuestions[currentQuestion];
+    const progress = ((currentQuestion + 1) / randomizedQuestions.length) * 100;
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 py-12">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <Button
+            onClick={() => setStep('home')}
+            variant="ghost"
+            className="mb-6"
+          >
+            <ArrowRight className="w-4 h-4 mr-2 rotate-180" />
+            Voltar
+          </Button>
+
+          <Card className="p-8 bg-white/90 backdrop-blur-sm shadow-xl">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Brain className="w-8 h-8 text-white" />
+              </div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                Descubra sua Terapia Ideal
+              </h1>
+              <p className="text-gray-600">
+                Pergunta {currentQuestion + 1} de {randomizedQuestions.length}
+              </p>
+            </div>
+
+            {/* Barra de Progresso */}
+            <div className="mb-8">
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div 
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 h-full transition-all duration-500 ease-out"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Pergunta */}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-800 mb-6 text-center">
+                {currentQuizQuestion?.question}
+              </h2>
+
+              {/* Opções */}
+              <div className="space-y-3">
+                {currentQuizQuestion?.options.map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => handleAnswer(option.approach)}
+                    className="w-full p-4 text-left border-2 border-gray-200 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all duration-200 group"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-8 h-8 bg-purple-100 group-hover:bg-purple-600 text-purple-600 group-hover:text-white rounded-full flex items-center justify-center font-semibold text-sm transition-colors">
+                        {option.id.toUpperCase()}
+                      </span>
+                      <span className="text-gray-700 group-hover:text-gray-900 font-medium">
+                        {option.text}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // TELA RESULTADO
+  if (step === 'result' && quizResult) {
+    const primaryApproach = therapyApproaches[quizResult.approaches[0]];
+    const secondaryApproach = quizResult.approaches[1] ? therapyApproaches[quizResult.approaches[1]] : null;
+    const hasMultipleTopScores = quizResult.approaches.length > 1;
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 py-12">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <Card className="p-8 bg-white/90 backdrop-blur-sm shadow-xl">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-4xl">
+                {primaryApproach.icon}
+              </div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                Seu Resultado
+              </h1>
+              <p className="text-gray-600">
+                {hasMultipleTopScores 
+                  ? 'Você tem compatibilidade com duas abordagens!' 
+                  : 'Sua terapia ideal foi identificada!'}
+              </p>
+            </div>
+
+            {/* Resultado Principal */}
+            <div className="mb-8 p-6 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl border-2 border-purple-200">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-12 h-12 bg-gradient-to-br ${primaryApproach.color} rounded-xl flex items-center justify-center text-2xl`}>
+                  {primaryApproach.icon}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">{primaryApproach.name}</h2>
+                  <p className="text-sm text-gray-600">
+                    {quizResult.scores[quizResult.approaches[0]]} de {randomizedQuestions.length} respostas
+                  </p>
+                </div>
+              </div>
+              <p className="text-gray-700 mb-4">{primaryApproach.description}</p>
+              <Button
+                onClick={() => router.push(`/abordagens/${primaryApproach.id}`)}
+                variant="outline"
+                size="sm"
+                className="border-purple-600 text-purple-600 hover:bg-purple-50"
+              >
+                <BookOpen className="w-4 h-4 mr-2" />
+                Saiba mais sobre {primaryApproach.name}
+              </Button>
+            </div>
+
+            {/* Resultado Secundário (se houver empate) */}
+            {hasMultipleTopScores && secondaryApproach && (
+              <div className="mb-8 p-6 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-xl border-2 border-blue-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-12 h-12 bg-gradient-to-br ${secondaryApproach.color} rounded-xl flex items-center justify-center text-2xl`}>
+                    {secondaryApproach.icon}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-800">{secondaryApproach.name}</h2>
+                    <p className="text-sm text-gray-600">
+                      {quizResult.scores[quizResult.approaches[1]]} de {randomizedQuestions.length} respostas
+                    </p>
+                  </div>
+                </div>
+                <p className="text-gray-700 mb-4">{secondaryApproach.description}</p>
+                <Button
+                  onClick={() => router.push(`/abordagens/${secondaryApproach.id}`)}
+                  variant="outline"
+                  size="sm"
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Saiba mais sobre {secondaryApproach.name}
+                </Button>
+              </div>
+            )}
+
+            {/* Pontuação Detalhada */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Sua Pontuação Completa</h3>
+              <div className="space-y-3">
+                {Object.entries(quizResult.scores)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([approach, score]) => {
+                    const therapy = therapyApproaches[approach as TherapyApproach];
+                    const percentage = (score / randomizedQuestions.length) * 100;
+                    return (
+                      <div key={approach} className="flex items-center gap-3">
+                        <div className="flex-shrink-0 w-8 h-8 text-xl">
+                          {therapy.icon}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-sm font-medium text-gray-700">{therapy.name}</span>
+                            <span className="text-sm text-gray-600">{score}/{randomizedQuestions.length}</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className={`bg-gradient-to-r ${therapy.color} h-full rounded-full transition-all duration-500`}
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+
+            {/* Mensagem Amigável */}
+            <div className="mb-8 p-6 bg-blue-50 rounded-xl border border-blue-200">
+              <div className="flex items-start gap-3">
+                <Heart className="w-6 h-6 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-2">Por que essa recomendação?</h3>
+                  <p className="text-sm text-gray-700">
+                    {hasMultipleTopScores 
+                      ? `Suas respostas indicam que você se identifica tanto com ${primaryApproach.name} quanto com ${secondaryApproach?.name}. Isso é ótimo! Significa que você tem flexibilidade para escolher entre essas abordagens ou até mesmo combiná-las. Ambas podem ser muito benéficas para você.`
+                      : `Suas respostas mostram uma forte identificação com ${primaryApproach.name}. Esta abordagem se alinha perfeitamente com suas expectativas e necessidades terapêuticas. Psicólogos especializados nesta linha podem ajudá-lo a alcançar seus objetivos de forma mais eficaz.`
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Ações */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button
+                onClick={() => router.push('/find-psychologists')}
+                className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 text-lg rounded-xl shadow-lg"
+              >
+                <Users className="w-5 h-5 mr-2" />
+                Ver Psicólogos Compatíveis
+              </Button>
+              <Button
+                onClick={startQuiz}
+                variant="outline"
+                className="flex-1 border-2 border-purple-600 text-purple-600 hover:bg-purple-50 py-6 text-lg rounded-xl"
+              >
+                Refazer Quiz
+              </Button>
+            </div>
+
+            <div className="mt-6 text-center">
+              <Button
+                onClick={() => setStep('home')}
+                variant="ghost"
+                className="text-gray-600 hover:text-gray-800"
+              >
+                Voltar para Home
+              </Button>
+            </div>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -545,7 +791,7 @@ export default function HomePage() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">Assinatura mensal</span>
-                  <span className="text-2xl font-bold text-purple-600">R$ 99,90/mês</span>
+                  <span className="text-2xl font-bold text-purple-600">R$ 49,90/mês</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <CheckCircle className="w-4 h-4 text-green-600" />
@@ -905,7 +1151,7 @@ export default function HomePage() {
               <div className="space-y-4">
                 <div className="p-4 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg">
                   <p className="text-sm text-gray-600 mb-1">Plano Mensal</p>
-                  <p className="text-3xl font-bold text-purple-600">R$ 99,90</p>
+                  <p className="text-3xl font-bold text-purple-600">R$ 49,90</p>
                   <p className="text-xs text-gray-500 mt-1">por mês</p>
                 </div>
 
@@ -935,11 +1181,11 @@ export default function HomePage() {
                 <div className="pt-4 border-t border-gray-200">
                   <div className="flex justify-between items-center text-sm mb-2">
                     <span className="text-gray-600">Subtotal</span>
-                    <span className="font-medium">R$ 99,90</span>
+                    <span className="font-medium">R$ 49,90</span>
                   </div>
                   <div className="flex justify-between items-center font-bold text-lg">
                     <span>Total</span>
-                    <span className="text-purple-600">R$ 99,90</span>
+                    <span className="text-purple-600">R$ 49,90</span>
                   </div>
                 </div>
               </div>
@@ -1046,7 +1292,7 @@ export default function HomePage() {
                           <li>Clique em "Finalizar Pagamento"</li>
                           <li>Um QR Code será gerado</li>
                           <li>Escaneie com o app do seu banco</li>
-                          <li>Confirme o pagamento de R$ 99,90</li>
+                          <li>Confirme o pagamento de R$ 49,90</li>
                           <li>Seu perfil será ativado automaticamente</li>
                         </ol>
                       </div>
@@ -1076,7 +1322,7 @@ export default function HomePage() {
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 text-lg rounded-xl shadow-lg"
                 >
                   <CreditCard className="w-5 h-5 mr-2" />
-                  Finalizar Pagamento - R$ 99,90
+                  Finalizar Pagamento - R$ 49,90
                 </Button>
 
                 <p className="text-xs text-center text-gray-500">
@@ -1090,7 +1336,7 @@ export default function HomePage() {
     );
   }
 
-  // Retorno padrão para outros steps (quiz, result, list, profile, etc.)
+  // Retorno padrão para outros steps (list, profile, therapy-detail, etc.)
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center p-4">
       <Card className="p-8 text-center">
