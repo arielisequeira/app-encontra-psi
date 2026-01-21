@@ -57,6 +57,7 @@ export default function HomePage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'credit_card' | 'pix'>('credit_card');
   const [currentPsychologist, setCurrentPsychologist] = useState<Psychologist | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Verificar se usuário está logado ao carregar
   useEffect(() => {
@@ -226,35 +227,47 @@ export default function HomePage() {
     setStep('psy-subscription');
   };
 
-  const handleSubscriptionPayment = (e: React.FormEvent) => {
+  const handleSubscriptionPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Pagamento processado com sucesso! Seu perfil será ativado após a validação dos documentos.');
     
-    // Criar perfil do psicólogo (simulado)
-    const newPsychologist: Psychologist = {
-      id: Date.now().toString(),
-      name: psyRegistration.fullName || '',
-      crp: psyRegistration.crp || '',
-      photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop',
-      approaches: psyRegistration.approaches || [],
-      specialties: psyRegistration.specialties || [],
-      bio: psyRegistration.bio || '',
-      city: psyRegistration.city || '',
-      state: psyRegistration.state || '',
-      neighborhood: psyRegistration.neighborhood || '',
-      modality: psyRegistration.modality || [],
-      priceRange: psyRegistration.priceRange || '',
-      rating: 0,
-      reviewCount: 0,
-      availability: [],
-      subscriptionStatus: 'active',
-      subscriptionPlan: 'monthly',
-      subscriptionExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      documentsValidated: false
-    };
-    
-    setCurrentPsychologist(newPsychologist);
-    setStep('psy-dashboard');
+    if (!psyRegistration.fullName || !psyRegistration.email || !psyRegistration.crp) {
+      alert('Dados incompletos. Por favor, volte e preencha todos os campos.');
+      return;
+    }
+
+    setIsProcessingPayment(true);
+
+    try {
+      // Criar preferência de pagamento no Mercado Pago
+      const response = await fetch('/api/mercadopago/create-preference', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName: psyRegistration.fullName,
+          email: psyRegistration.email,
+          crp: psyRegistration.crp,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao criar preferência de pagamento');
+      }
+
+      const data = await response.json();
+      
+      // Redirecionar para o checkout do Mercado Pago
+      if (data.initPoint) {
+        window.location.href = data.initPoint;
+      } else {
+        throw new Error('Link de pagamento não disponível');
+      }
+    } catch (error) {
+      console.error('Erro ao processar pagamento:', error);
+      alert('Erro ao processar pagamento. Por favor, tente novamente.');
+      setIsProcessingPayment(false);
+    }
   };
 
   const toggleApproach = (approach: TherapyApproach) => {
